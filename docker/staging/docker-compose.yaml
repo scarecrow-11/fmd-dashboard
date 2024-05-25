@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  fmd-db-staging:
+    image: postgres:16.2
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - '${DB_PORT}:5432'
+    volumes:
+      - fmd-db-staging:/var/lib/postgresql/data
+  fmd-backend-staging:
+    build:
+      context: ../../backend
+      dockerfile: ../docker/staging/backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@fmd-db-staging:5432/fmd-db-staging?schema=public
+    ports:
+      - '${BACKEND_PORT}:4000'
+    depends_on:
+      - fmd-db-staging
+    volumes:
+      - ../../backend/src:/app/src
+  fmd-frontend-staging:
+    build:
+      context: ../../frontend
+      dockerfile: ../docker/staging/frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      API_BASE_URL: http://fmd-backend-staging:4000
+    ports:
+      - '${FRONTEND_PORT}:3000'
+    depends_on:
+      - fmd-backend-staging
+    volumes:
+      - ../../frontend/src:/app/src
+volumes:
+  fmd-db-staging:

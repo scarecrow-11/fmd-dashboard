@@ -1,0 +1,43 @@
+version: '3.9'
+
+services:
+  fmd-db-production:
+    image: postgres:16.2
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - '${DB_PORT}:5432'
+    volumes:
+      - fmd-db-production:/var/lib/postgresql/data
+  fmd-backend-production:
+    build:
+      context: ../../backend
+      dockerfile: ../docker/production/backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@fmd-db-production:5432/fmd-db-production?schema=public
+    ports:
+      - '${BACKEND_PORT}:4000'
+    depends_on:
+      - fmd-db-production
+    volumes:
+      - ../../backend/src:/app/src
+  fmd-frontend-production:
+    build:
+      context: ../../frontend
+      dockerfile: ../docker/production/frontend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      API_BASE_URL: http://fmd-backend-production:4000
+    ports:
+      - '${FRONTEND_PORT}:3000'
+    depends_on:
+      - fmd-backend-production
+    volumes:
+      - ../../frontend/src:/app/src
+volumes:
+  fmd-db-production:
